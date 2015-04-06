@@ -194,8 +194,8 @@ web_instance1 = template.add_resource(ec2.Instance(
     IamInstanceProfile=Ref(web_instance_profile),
     UserData=Base64(Join('', [
         '<script>\n',
-        "cfn-init -s '", Ref('AWS::StackName'), "' --region ", Ref("AWS::Region"),
-        " -r Web1 -c ascending\n",
+        'cfn-init -s "', Ref('AWS::StackName'), '" --region ', Ref("AWS::Region"),
+        ' -r Web1 -c ascending\n',
 
         'pushd "C:\\Program Files\\Octopus Deploy\\Tentacle"\n',
         'Tentacle.exe create-instance --instance "Tentacle" --config "C:\\Octopus\\Tentacle\\Tentacle.config" --console\n',
@@ -325,8 +325,8 @@ worker_instance = template.add_resource(ec2.Instance(
     SecurityGroups=[Ref(worker_security_group)],
     UserData=Base64(Join('', [
         '<script>\n',
-        "cfn-init -s '", Ref('AWS::StackName'), "' --region ", Ref("AWS::Region"),
-        " -r Worker1 -c ascending\n",
+        'cfn-init -s "', Ref('AWS::StackName'), '" --region ', Ref("AWS::Region"),
+        ' -r Worker1 -c ascending\n',
 
         'pushd "C:\\Program Files\\Octopus Deploy\\Tentacle"\n',
         'Tentacle.exe create-instance --instance "Tentacle" --config "C:\\Octopus\\Tentacle\\Tentacle.config" --console\n',
