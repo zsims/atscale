@@ -33,6 +33,13 @@ octopus_api_key = template.add_parameter(Parameter(
     Type="String"
 ))
 
+# used for allowing traffic from the master to our tentacle
+octopus_security_group_id = template.add_parameter(Parameter(
+    "OctopusSecurityGroupId",
+    Description="Id of the security group that the Octopus Master is attached to",
+    Type="String"
+))
+
 template.add_mapping('RegionMap', {
     "us-west-2": {"AMI": "ami-59f2d769"},
 })
@@ -42,7 +49,7 @@ image_bucket = template.add_resource(s3.Bucket("AtScaleImagesDev"))
 
 image_bucket_policy = template.add_resource(s3.BucketPolicy(
     "AtScaleImagesDevPolicy",
-    Bucket="AtScaleImagesDev",
+    Bucket=Ref(image_bucket),
     PolicyDocument={
         "Statement": [
             {
@@ -52,7 +59,8 @@ image_bucket_policy = template.add_resource(s3.BucketPolicy(
                     "AWS": "*"
                 },
                 "Action": "s3:GetObject",
-                "Resource": "arn:aws:s3:::AtScaleImagesDev/output/*"
+                # Note that using Ref() means the bucket doesn't yet have to exist, and CloudFormation will work out ordering
+                "Resource": Join("", ["arn:aws:s3:::", Ref(image_bucket), "/output*"])
             }
         ]
     }
@@ -158,7 +166,7 @@ web_security_group = template.add_resource(ec2.SecurityGroup(
             IpProtocol="tcp",
             FromPort="10933",
             ToPort="10933",
-            SourceSecurityGroupName="OctopusMasterSg"
+            SourceSecurityGroupId=Ref(octopus_security_group_id)
         )
     ]
 ))
@@ -289,7 +297,7 @@ worker_security_group = template.add_resource(ec2.SecurityGroup(
             IpProtocol="tcp",
             FromPort="10933",
             ToPort="10933",
-            SourceSecurityGroupName="OctopusMasterSg"
+            SourceSecurityGroupId=Ref(octopus_security_group_id)
         )
     ]
 ))
@@ -300,6 +308,7 @@ worker_instance = template.add_resource(ec2.Instance(
     InstanceType="t1.micro",
     KeyName=Ref(keyname_param),
     IamInstanceProfile=Ref(worker_instance_profile),
+    SecurityGroups=[Ref(worker_security_group)],
     UserData=Base64(Join('', [
         '<script>\n',
         "cfn-init -s '", Ref('AWS::StackName'), "' --region ", Ref("AWS::Region"),

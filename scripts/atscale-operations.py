@@ -49,6 +49,12 @@ template.add_output(Output(
     Value=Join("", ["http://", GetAtt(octopus_deploy_server_instance1, "PublicDnsName")])
 ))
 
+template.add_output(Output(
+    "SecurityGroupId",
+    Description="Security group ID of the Octopus Deploy Server",
+    Value=GetAtt(octopus_master_security_group, "GroupId")
+))
+
 if __name__ == '__main__':
     with open('operations.json', 'w') as fh:
         contents = template.to_json()
