@@ -45,10 +45,10 @@ template.add_mapping('RegionMap', {
 })
 
 # Bucket to hold the images
-image_bucket = template.add_resource(s3.Bucket("AtScaleImagesDev"))
+image_bucket = template.add_resource(s3.Bucket("AtScaleImages"))
 
 image_bucket_policy = template.add_resource(s3.BucketPolicy(
-    "AtScaleImagesDevPolicy",
+    "AtScaleImagesPolicy",
     Bucket=Ref(image_bucket),
     PolicyDocument={
         "Statement": [
@@ -66,9 +66,15 @@ image_bucket_policy = template.add_resource(s3.BucketPolicy(
     }
 ))
 
+template.add_output(Output(
+    "ImageBucketDomainName",
+    Description="Domain name of the AtScale image bucket",
+    Value=GetAtt(image_bucket, "DomainName")
+))
+
 # DynamoDB table to track the image requests
 image_table = template.add_resource(dynamodb.Table(
-    "AtScaleResizeRequestsDev",
+    "AtScaleResizeRequests",
     AttributeDefinitions=[
         dynamodb.AttributeDefinition("ImageId", "S"),
     ],
@@ -78,8 +84,16 @@ image_table = template.add_resource(dynamodb.Table(
     ProvisionedThroughput=dynamodb.ProvisionedThroughput(3, 1)
 ))
 
+# TODO: There's no way to get the name of the DynamoDB table, see http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/intrinsic-function-reference-getatt.html
+
 # SQS queue for resize jobs
-resize_queue = template.add_resource(sqs.Queue("AtScaleImagesResizeQueueDev"))
+resize_queue = template.add_resource(sqs.Queue("AtScaleImagesResizeQueue"))
+
+template.add_output(Output(
+    "ResizeQueueName",
+    Description="SQS queue name of our image resize requests",
+    Value=GetAtt(resize_queue, "QueueName")
+))
 
 # Instance role
 web_instance_role = template.add_resource(iam.Role(
@@ -105,7 +119,7 @@ web_instance_role = template.add_resource(iam.Role(
                             "sqs:SendMessage"
                         ],
                         "Resource": [
-                            GetAtt("AtScaleImagesResizeQueueDev", "Arn")
+                            GetAtt("AtScaleImagesResizeQueue", "Arn")
                         ]
                     },
                     {
@@ -119,7 +133,7 @@ web_instance_role = template.add_resource(iam.Role(
                         "Resource": [
                             # DynamoDB doesn't support GetAtt(..., "Arn") in cloud formation :(
                             Join(":", ["arn:aws:dynamodb", Ref("AWS::Region"), Ref("AWS::AccountId"),
-                                       "table/AtScaleResizeRequestsDev"])
+                                       "table/AtScaleResizeRequests"])
                         ]
                     },
                     {
@@ -128,7 +142,7 @@ web_instance_role = template.add_resource(iam.Role(
                             "s3:PutObject"
                         ],
                         "Resource": [
-                            "arn:aws:s3:::AtScaleImagesDev"
+                            "arn:aws:s3:::AtScaleImages"
                         ]
                     }
                 ]
@@ -249,7 +263,7 @@ worker_instance_role = template.add_resource(iam.Role(
                             "sqs:DeleteMessage",
                         ],
                         "Resource": [
-                            GetAtt("AtScaleImagesResizeQueueDev", "Arn")
+                            GetAtt("AtScaleImagesResizeQueue", "Arn")
                         ]
                     },
                     {
@@ -262,7 +276,7 @@ worker_instance_role = template.add_resource(iam.Role(
                         ],
                         "Resource": [
                             Join(":", ["arn:aws:dynamodb", Ref("AWS::Region"), Ref("AWS::AccountId"),
-                                       "table/AtScaleResizeRequestsDev"])
+                                       "table/AtScaleResizeRequests"])
                         ]
                     },
                     {
@@ -272,7 +286,7 @@ worker_instance_role = template.add_resource(iam.Role(
                             "s3:GetObject"
                         ],
                         "Resource": [
-                            "arn:aws:s3:::AtScaleImagesDev"
+                            "arn:aws:s3:::AtScaleImages"
                         ]
                     }
                 ]
