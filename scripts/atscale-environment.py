@@ -40,6 +40,24 @@ template.add_mapping('RegionMap', {
 # Bucket to hold the images
 image_bucket = template.add_resource(s3.Bucket("AtScaleImagesDev"))
 
+image_bucket_policy = template.add_resource(s3.BucketPolicy(
+    "AtScaleImagesDevPolicy",
+    Bucket="AtScaleImagesDev",
+    PolicyDocument={
+        "Statement": [
+            {
+                "Sid": "AllowPublicRead",
+                "Effect": "Allow",
+                "Principal": {
+                    "AWS": "*"
+                },
+                "Action": "s3:GetObject",
+                "Resource": "arn:aws:s3:::AtScaleImagesDev/output/*"
+            }
+        ]
+    }
+))
+
 # DynamoDB table to track the image requests
 image_table = template.add_resource(dynamodb.Table(
     "AtScaleResizeRequestsDev",
