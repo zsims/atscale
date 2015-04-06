@@ -29,7 +29,7 @@ octopus_deploy_thumbprint = template.add_parameter(Parameter(
 
 octopus_api_key = template.add_parameter(Parameter(
     "OctopusApiKey",
-    Description="Thumbprint of the Octopus Deploy Server",
+    Description="API key to use with the Octopus Deploy Server",
     Type="String"
 ))
 
@@ -173,7 +173,7 @@ web_instance1 = template.add_resource(ec2.Instance(
     UserData=Base64(Join('', [
         '<script>\n',
         "cfn-init -s '", Ref('AWS::StackName'), "' --region ", Ref("AWS::Region"),
-        " -r OctopusDeployServer1 -c ascending\n",
+        " -r Web1 -c ascending\n",
 
         'pushd "C:\\Program Files\\Octopus Deploy\\Tentacle"\n',
         'Tentacle.exe create-instance --instance "Tentacle" --config "C:\\Octopus\\Tentacle\\Tentacle.config" --console\n',
@@ -279,7 +279,6 @@ worker_instance_profile = template.add_resource(iam.InstanceProfile(
     Roles=[Ref(worker_instance_role)]
 ))
 
-# Web security group
 worker_security_group = template.add_resource(ec2.SecurityGroup(
     "AtScaleWorkerSg",
     GroupDescription="Security group for AtScale worker instances",
@@ -300,7 +299,44 @@ worker_instance = template.add_resource(ec2.Instance(
     ImageId=FindInMap("RegionMap", Ref("AWS::Region"), "AMI"),
     InstanceType="t1.micro",
     KeyName=Ref(keyname_param),
-    IamInstanceProfile=Ref(worker_instance_profile)
+    IamInstanceProfile=Ref(worker_instance_profile),
+    UserData=Base64(Join('', [
+        '<script>\n',
+        "cfn-init -s '", Ref('AWS::StackName'), "' --region ", Ref("AWS::Region"),
+        " -r Worker1 -c ascending\n",
+
+        'pushd "C:\\Program Files\\Octopus Deploy\\Tentacle"\n',
+        'Tentacle.exe create-instance --instance "Tentacle" --config "C:\\Octopus\\Tentacle\\Tentacle.config" --console\n',
+        'Tentacle.exe new-certificate --instance "Tentacle" --console\n',
+        'Tentacle.exe configure --instance "Tentacle" --home "C:\\Octopus" --console\n'
+        'Tentacle.exe configure --instance "Tentacle" --app "C:\\Octopus\\Applications" --console\n',
+        'Tentacle.exe configure --instance "Tentacle" --port "10933" --console\n',
+        'Tentacle.exe configure --instance "Tentacle" --trust "', Ref(octopus_deploy_thumbprint), '" --console\n',
+        'Tentacle.exe register-with --instance "Tentacle" --server "', Ref(octopus_master_url), '" --apiKey="', Ref(octopus_api_key), '" --role "worker-server" --environment "Dev" --comms-style TentaclePassive --console\n',
+        'Tentacle.exe service --instance "Tentacle" --install --start --console\n',
+        'popd\n',
+        '</script>\n'
+    ])),
+    Metadata=cloudformation.Metadata(
+        cloudformation.Init(
+            cloudformation.InitConfigSets(
+                ascending=['config1'],
+                descending=['config1']
+            ),
+            config1=cloudformation.InitConfig(
+                files={
+                    r"c:\Packages\Octopus.Tentacle.Latest-x64.msi": {
+                        "source": "http://octopusdeploy.com/downloads/latest/OctopusTentacle64"
+                    }
+                },
+                commands={
+                    "1-install-octopus-tentacle": {
+                        "command": r"msiexec.exe /i c:\Packages\Octopus.Tentacle.Latest-x64.msi /quiet"
+                    }
+                }
+            )
+        )
+    )
 ))
 
 with open('environment.json', 'w') as fh:
