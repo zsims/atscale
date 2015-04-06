@@ -218,7 +218,7 @@ web_instance1 = template.add_resource(ec2.Instance(
             config1=cloudformation.InitConfig(
                 files={
                     r"c:\Packages\Octopus.Tentacle.Latest-x64.msi": {
-                        "source": "http://octopusdeploy.com/downloads/latest/OctopusTentacle64"
+                        "source": "https://octopusdeploy.com/downloads/latest/OctopusTentacle64"
                     }
                 },
                 commands={
@@ -349,7 +349,7 @@ worker_instance = template.add_resource(ec2.Instance(
             config1=cloudformation.InitConfig(
                 files={
                     r"c:\Packages\Octopus.Tentacle.Latest-x64.msi": {
-                        "source": "http://octopusdeploy.com/downloads/latest/OctopusTentacle64"
+                        "source": "https://octopusdeploy.com/downloads/latest/OctopusTentacle64"
                     }
                 },
                 commands={
