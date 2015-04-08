@@ -1,4 +1,4 @@
-from troposphere import FindInMap, GetAtt, Parameter, Ref, Template, Join, Output
+from troposphere import Base64, FindInMap, GetAtt, Parameter, Ref, Template, Join, Output
 import troposphere.ec2 as ec2
 
 template = Template()
@@ -41,6 +41,16 @@ octopus_deploy_server_instance1 = template.add_resource(ec2.Instance(
     InstanceType="t1.micro",
     KeyName=Ref(key_name_param),
     SecurityGroups=[Ref(octopus_master_security_group)],
+    Tags=[
+        ec2.Tag("Name", "Octopus Deploy Server")
+    ],
+    UserData=Base64(Join('', [
+        '<powershell>\n',
+        # Windows firewall is on by default for the official Amazon AMIs
+        # So we have to allow port 80 through for the octopus deploy server
+        'New-NetFirewallRule -Displayname "Allow inbound TCP Port 80" -Direction inbound -LocalPort 80 -Protocol TCP -Action Allow\n'
+        '</powershell>'
+    ])),
 ))
 
 template.add_output(Output(

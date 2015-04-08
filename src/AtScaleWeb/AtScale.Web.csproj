@@ -85,7 +85,7 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="AtScaleCore\AtScale.Core.csproj">
+    <ProjectReference Include="..\AtScaleCore\AtScale.Core.csproj">
       <Project>{B84C86F4-55F7-4B2B-87B8-95D307A9425B}</Project>
       <Name>AtScale.Core</Name>
     </ProjectReference>
